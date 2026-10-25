@@ -4,15 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CASE 001</title>
+<title>CASE 001 — Материалы дела</title>
 
 <style>
 * {
     box-sizing: border-box;
 }
 
-body {
+html, body {
     margin: 0;
+    width: 100%;
+    height: 100%;
     background: #000;
     color: #ddd;
     font-family: "Courier New", monospace;
@@ -21,109 +23,147 @@ body {
 
 #screen {
     position: relative;
-    width: 100vw;
-    height: 100dvh;
+    width: 100%;
+    height: 100%;
     background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
 #video {
+    position: absolute;
     width: 100%;
     height: 100%;
+    inset: 0;
     object-fit: contain;
     background: #000;
+    transform: scale(1.12);
+    opacity: 0;
+    transition: opacity 1.2s ease;
+}
+
+#video.visible {
+    opacity: 1;
 }
 
 #shade {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(
-        to bottom,
-        rgba(0,0,0,.25),
-        transparent 25%,
-        transparent 65%,
-        rgba(0,0,0,.75)
-    );
+    z-index: 2;
+    background:
+        linear-gradient(to bottom, rgba(0,0,0,.15), transparent 25%, transparent 70%, rgba(0,0,0,.6)),
+        radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.6) 100%);
 }
 
-#grain {
+#noise {
     position: absolute;
-    inset: 0;
+    inset: -50%;
+    z-index: 3;
     pointer-events: none;
-    opacity: .10;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    opacity: .12;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+    animation: noiseMove .2s steps(2) infinite;
 }
 
-#caption {
+@keyframes noiseMove {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(2%, -1%); }
+    50% { transform: translate(-1%, 2%); }
+    75% { transform: translate(1%, 1%); }
+    100% { transform: translate(-2%, -1%); }
+}
+
+#subtitle {
     position: absolute;
-    bottom: 12%;
+    z-index: 5;
     left: 7%;
     right: 7%;
+    bottom: 10%;
+    min-height: 3em;
     text-align: center;
-    font-size: clamp(15px, 2.4vw, 23px);
+    color: #ddd;
+    font-size: clamp(15px, 2.2vw, 23px);
     line-height: 1.5;
-    color: #eee;
-    text-shadow: 0 2px 5px #000, 0 0 8px #000;
+    text-shadow: 0 2px 5px #000, 0 0 10px #000;
     white-space: pre-line;
+}
+
+#status {
+    position: absolute;
+    z-index: 5;
+    top: 22px;
+    left: 24px;
+    color: #aaa;
+    font-size: 12px;
+    letter-spacing: 2px;
+    opacity: .75;
 }
 
 #hint {
     position: absolute;
-    bottom: 3%;
-    left: 0;
-    right: 0;
-    text-align: center;
-    color: #888;
-    font-size: 12px;
-    letter-spacing: 2px;
-    opacity: 0;
-    transition: opacity 1s;
+    z-index: 5;
+    right: 20px;
+    bottom: 20px;
+    color: #777;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: right;
 }
 
-#hint.visible {
-    opacity: 1;
-}
-
-#case {
-    position: absolute;
-    top: 4%;
-    left: 4%;
-    color: #888;
-    font-size: 12px;
-    letter-spacing: 2px;
-}
-
-#flash {
-    position: absolute;
-    inset: 0;
-    background: #fff;
-    opacity: 0;
-    pointer-events: none;
-}
-
-#flash.active {
-    animation: flash .16s steps(2, end);
-}
-
-@keyframes flash {
-    0% { opacity: .18; }
-    100% { opacity: 0; }
-}
-
-#error {
+#end {
     display: none;
     position: absolute;
     inset: 0;
+    z-index: 10;
     background: #000;
-    padding: 30px;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
     text-align: center;
-    line-height: 1.7;
+    padding: 24px;
+}
+
+#end h1 {
     color: #aaa;
+    font-size: clamp(20px, 4vw, 34px);
+    font-weight: normal;
+    letter-spacing: 5px;
+}
+
+#end p {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+#restart {
+    margin-top: 24px;
+    padding: 12px 22px;
+    background: transparent;
+    border: 1px solid #555;
+    color: #aaa;
+    font: inherit;
+    cursor: pointer;
+}
+
+#restart:hover {
+    color: #fff;
+    border-color: #aaa;
+}
+
+@keyframes zoomOut {
+    from { transform: scale(1.12); }
+    to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #noise {
+        animation: none;
+    }
 }
 </style>
 </head>
@@ -131,301 +171,424 @@ body {
 <body>
 <div id="screen">
     <video id="video" playsinline preload="auto"></video>
-    <div id="shade"></div>
-    <div id="grain"></div>
-    <div id="case">CASE 001 // ARCHIVE</div>
-    <div id="caption"></div>
-    <div id="hint">[ НАЖМИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ ]</div>
-    <div id="flash"></div>
 
-    <div id="error">
-        Не удалось загрузить видео.<br>
-        Проверь названия файлов и их расположение в репозитории.
+    <div id="shade"></div>
+    <div id="noise"></div>
+
+    <div id="status">CASE 001 // МАТЕРИАЛЫ ДЕЛА</div>
+    <div id="subtitle"></div>
+    <div id="hint">ДВОЙНОЙ КЛИК — ПРОПУСТИТЬ ФРАГМЕНТ</div>
+
+    <div id="end">
+        <h1>КОНЕЦ МАТЕРИАЛОВ</h1>
+        <p>CASE 001<br>ДОПОЛНИТЕЛЬНЫЕ МАТЕРИАЛЫ ОТСУТСТВУЮТ</p>
+        <button id="restart">ПЕРЕСМОТРЕТЬ</button>
     </div>
 </div>
 
-<audio id="voice"></audio>
+<audio id="voice" preload="auto"></audio>
 
 <script>
+"use strict";
+
+/*
+  Все файлы должны лежать в одной папке с story.html.
+  video1.mp4 — без озвучки.
+*/
+
 const scenes = [
     {
         video: "video1.mp4",
-        audio: [],
+        voices: [],
         subtitles: []
     },
     {
         video: "video2.mp4",
-        audio: ["voice2a.mp3", "voice2b.mp3"],
-        subtitles: [
+        voices: [
             {
-                start: 0,
-                end: 13,
+                file: "voice2a.mp3",
                 text: "Тело несовершеннолетней было обнаружено в собственном доме. По предварительным данным, смерть могла выглядеть как самоубийство через повешение."
             },
             {
-                start: 13,
-                end: 18,
+                file: "voice2b.mp3",
                 text: "Однако при первичном осмотре на шее погибшей обнаружены следы сдавливания, характер которых вызывает сомнения в первоначальной версии произошедшего."
             }
         ]
     },
     {
         video: "video3.mp4",
-        audio: ["voice3.mp3"],
-        subtitles: [
+        voices: [
             {
-                start: 0,
-                end: 9,
+                file: "voice3.mp3",
                 text: "Предварительное заключение: имеющихся данных недостаточно для однозначного вывода о самоубийстве. Версия насильственной смерти не исключена."
             }
         ]
     },
     {
         video: "video4.mp4",
-        audio: ["voice4.mp3"],
-        subtitles: [
+        voices: [
             {
-                start: 0,
-                end: 12,
+                file: "voice4.mp3",
                 text: "Следы требуют дополнительной судебно-медицинской экспертизы. На данный момент установить, были ли они получены до смерти или возникли при иных обстоятельствах, не представляется возможным."
             }
         ]
     }
 ];
 
+const STORAGE_KEY = "case001_storyCheckpoint";
+
+const screen = document.getElementById("screen");
 const video = document.getElementById("video");
 const voice = document.getElementById("voice");
-const caption = document.getElementById("caption");
-const hint = document.getElementById("hint");
-const flash = document.getElementById("flash");
-const errorBox = document.getElementById("error");
+const subtitle = document.getElementById("subtitle");
+const status = document.getElementById("status");
+const endScreen = document.getElementById("end");
+const restartButton = document.getElementById("restart");
 
-let sceneIndex = Number(localStorage.getItem("storyScene") || 0);
-let audioIndex = 0;
-let sceneReady = false;
-let audioFinished = false;
+let sceneIndex = 0;
+let sceneToken = 0;
+let voiceIndex = 0;
+let timers = [];
 let videoFinished = false;
-let frozen = false;
-let audioStartedAt = 0;
-let audioTimer = null;
-let subtitleTimer = null;
+let voicesFinished = false;
 let waitingForGesture = false;
+let ended = false;
+let lastTapTime = 0;
+let voicePlayToken = 0;
 
-sceneIndex = Math.max(0, Math.min(sceneIndex, scenes.length - 1));
+/*
+  СОХРАНЕНИЕ ТОЛЬКО В КОНТРОЛЬНЫХ ТОЧКАХ.
 
-function saveProgress() {
-    localStorage.setItem("storyScene", String(sceneIndex));
+  Когда понадобится сохранить прогресс в конкретной точке,
+  вызови saveCheckpoint(номерСледующейСцены).
+
+  Например:
+  saveCheckpoint(2);
+
+  Это сохранит начало третьего фрагмента.
+  Автоматического сохранения после каждой сцены нет.
+*/
+
+function saveCheckpoint(nextSceneIndex) {
+    localStorage.setItem(
+        STORAGE_KEY,
+        String(nextSceneIndex)
+    );
 }
 
-function stopTimers() {
-    clearInterval(audioTimer);
-    clearInterval(subtitleTimer);
+function loadCheckpoint() {
+    const saved = Number(
+        localStorage.getItem(STORAGE_KEY)
+    );
+
+    if (
+        Number.isInteger(saved) &&
+        saved >= 0 &&
+        saved < scenes.length
+    ) {
+        return saved;
+    }
+
+    return 0;
 }
 
-function showSubtitle(text) {
-    caption.textContent = text || "";
+function clearTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
 }
 
-function startScene() {
-    stopTimers();
+function later(callback, delay) {
+    const id = setTimeout(callback, delay);
+    timers.push(id);
+    return id;
+}
 
-    const scene = scenes[sceneIndex];
+function stopVoice() {
+    voicePlayToken++;
+    voice.pause();
 
-    audioIndex = 0;
-    sceneReady = true;
-    audioFinished = scene.audio.length === 0;
-    videoFinished = false;
-    frozen = false;
-    waitingForGesture = false;
+    try {
+        voice.currentTime = 0;
+    } catch (_) {}
 
-    caption.textContent = "";
-    hint.classList.remove("visible");
-    errorBox.style.display = "none";
+    voice.removeAttribute("src");
+    voice.load();
+}
 
+function stopVideo() {
     video.pause();
+    video.onended = null;
+    video.onerror = null;
+    video.onloadeddata = null;
+
+    try {
+        video.currentTime = 0;
+    } catch (_) {}
+
     video.removeAttribute("src");
     video.load();
-    video.src = scene.video;
-    video.currentTime = 0;
-
-    saveProgress();
-
-    video.onloadeddata = async () => {
-        try {
-            await video.play();
-        } catch (e) {
-            waitingForGesture = true;
-            showSubtitle("[ НАЖМИТЕ, ЧТОБЫ НАЧАТЬ ]");
-        }
-
-        if (scene.audio.length > 0) {
-            playVoice();
-        } else {
-            audioFinished = true;
-            checkSceneEnd();
-        }
-    };
-
-    video.onerror = () => {
-        errorBox.style.display = "flex";
-    };
-
-    video.load();
 }
 
-function playVoice() {
-    const scene = scenes[sceneIndex];
+function resetSceneState() {
+    clearTimers();
+    stopVoice();
+    stopVideo();
 
-    if (audioIndex >= scene.audio.length) {
-        audioFinished = true;
-        showSubtitle("");
-        checkSceneEnd();
+    voiceIndex = 0;
+    videoFinished = false;
+    voicesFinished = false;
+    waitingForGesture = false;
+
+    subtitle.textContent = "";
+    video.classList.remove("visible");
+}
+
+async function startScene(index) {
+    if (index < 0 || index >= scenes.length) {
+        showEnding();
         return;
     }
 
-    voice.pause();
-    voice.currentTime = 0;
-    voice.src = scene.audio[audioIndex];
+    sceneToken++;
+    const token = sceneToken;
 
-    voice.onloadedmetadata = () => {
-        audioStartedAt = performance.now();
-        voice.play().catch(() => {
+    resetSceneState();
+
+    sceneIndex = index;
+    ended = false;
+    endScreen.style.display = "none";
+
+    const scene = scenes[sceneIndex];
+
+    status.textContent =
+        "CASE 001 // МАТЕРИАЛ " +
+        String(sceneIndex + 1).padStart(2, "0");
+
+    video.style.animation = "none";
+    void video.offsetWidth;
+    video.style.animation = "zoomOut 12s linear forwards";
+
+    video.src = scene.video;
+    video.load();
+
+    video.onloadeddata = async () => {
+        if (token !== sceneToken) return;
+
+        video.classList.add("visible");
+
+        try {
+            await video.play();
+        } catch (_) {
             waitingForGesture = true;
-            showSubtitle("[ НАЖМИТЕ, ЧТОБЫ ВОЗОБНОВИТЬ ЗВУК ]");
-        });
-        updateSubtitle();
-        clearInterval(subtitleTimer);
-        subtitleTimer = setInterval(updateSubtitle, 100);
+        }
+
+        if (token !== sceneToken) return;
+
+        if (scene.voices.length > 0) {
+            playVoice(token);
+        } else {
+            voicesFinished = true;
+            subtitle.textContent = "";
+            checkSceneComplete(token);
+        }
     };
 
-    voice.onended = () => {
-        clearInterval(subtitleTimer);
-        audioIndex++;
+    video.onended = () => {
+        if (token !== sceneToken) return;
 
-        if (audioIndex < scene.audio.length) {
-            playVoice();
+        videoFinished = true;
+        freezeLastFrame();
+        checkSceneComplete(token);
+    };
+
+    video.onerror = () => {
+        if (token !== sceneToken) return;
+
+        subtitle.textContent = "[ОШИБКА ЗАГРУЗКИ ВИДЕО]";
+        videoFinished = true;
+
+        if (scene.voices.length === 0) {
+            voicesFinished = true;
+        }
+
+        checkSceneComplete(token);
+    };
+}
+
+function freezeLastFrame() {
+    video.pause();
+
+    try {
+        if (Number.isFinite(video.duration) && video.duration > 0) {
+            video.currentTime = Math.max(0, video.duration - 0.04);
+        }
+    } catch (_) {}
+}
+
+async function playVoice(token) {
+    if (token !== sceneToken) return;
+
+    const scene = scenes[sceneIndex];
+
+    if (voiceIndex >= scene.voices.length) {
+        voicesFinished = true;
+        subtitle.textContent = "";
+        checkSceneComplete(token);
+        return;
+    }
+
+    const currentVoice = scene.voices[voiceIndex];
+    const thisVoiceToken = ++voicePlayToken;
+
+    voice.pause();
+    voice.src = currentVoice.file;
+    voice.load();
+
+    subtitle.textContent = currentVoice.text;
+
+    voice.onended = () => {
+        if (
+            token !== sceneToken ||
+            thisVoiceToken !== voicePlayToken
+        ) return;
+
+        voiceIndex++;
+
+        if (voiceIndex < scene.voices.length) {
+            playVoice(token);
         } else {
-            audioFinished = true;
-            showSubtitle("");
-            checkSceneEnd();
+            voicesFinished = true;
+            subtitle.textContent = "";
+            checkSceneComplete(token);
         }
     };
 
     voice.onerror = () => {
-        clearInterval(subtitleTimer);
-        audioFinished = true;
-        showSubtitle("[ ОШИБКА ЗАГРУЗКИ АУДИО ]");
-        checkSceneEnd();
+        if (
+            token !== sceneToken ||
+            thisVoiceToken !== voicePlayToken
+        ) return;
+
+        voiceIndex++;
+
+        if (voiceIndex < scene.voices.length) {
+            playVoice(token);
+        } else {
+            voicesFinished = true;
+            subtitle.textContent = "";
+            checkSceneComplete(token);
+        }
     };
 
-    voice.load();
-}
-
-function updateSubtitle() {
-    const scene = scenes[sceneIndex];
-    const subtitles = scene.subtitles;
-
-    if (!subtitles.length) {
-        showSubtitle("");
-        return;
-    }
-
-    let time = voice.currentTime;
-
-    // Вторая аудиозапись начинается после первой.
-    if (sceneIndex === 1 && audioIndex === 1) {
-        time += 13;
-    }
-
-    const line = subtitles.find(
-        item => time >= item.start && time < item.end
-    );
-
-    showSubtitle(line ? line.text : "");
-}
-
-video.addEventListener("ended", () => {
-    videoFinished = true;
-    freezeLastFrame();
-    checkSceneEnd();
-});
-
-function freezeLastFrame() {
-    if (frozen) return;
-
-    frozen = true;
-
-    // Переходим на последний отображаемый кадр и останавливаем видео.
-    if (video.duration && Number.isFinite(video.duration)) {
-        video.currentTime = Math.max(0, video.duration - 0.04);
-    }
-
-    video.pause();
-}
-
-video.addEventListener("timeupdate", () => {
-    if (
-        video.duration &&
-        Number.isFinite(video.duration) &&
-        video.currentTime >= video.duration - 0.04 &&
-        !videoFinished
-    ) {
-        videoFinished = true;
-        freezeLastFrame();
-        checkSceneEnd();
-    }
-});
-
-function checkSceneEnd() {
-    if (videoFinished && audioFinished) {
-        hint.classList.add("visible");
-    }
-}
-
-document.getElementById("screen").addEventListener("click", async () => {
-    if (waitingForGesture) {
+    try {
+        await voice.play();
         waitingForGesture = false;
+    } catch (_) {
+        waitingForGesture = true;
+    }
+}
 
-        if (voice.src && !audioFinished) {
-            try {
-                await voice.play();
-                updateSubtitle();
-            } catch (e) {}
-        } else if (!videoFinished) {
-            try {
-                await video.play();
-            } catch (e) {}
-        }
+function checkSceneComplete(token) {
+    if (token !== sceneToken) return;
 
+    /*
+      Не переключаем сцену автоматически.
+      Когда видео закончилось, последний кадр остаётся на экране,
+      пока пользователь не пропустит фрагмент двойным кликом.
+    */
+
+    if (videoFinished && voicesFinished) {
+        subtitle.textContent = " ";
+    }
+}
+
+function skipScene() {
+    if (ended) return;
+
+    sceneToken++;
+    clearTimers();
+    stopVoice();
+    stopVideo();
+
+    subtitle.textContent = "";
+
+    if (sceneIndex + 1 < scenes.length) {
+        startScene(sceneIndex + 1);
+    } else {
+        showEnding();
+    }
+}
+
+function showEnding() {
+    ended = true;
+    sceneToken++;
+
+    clearTimers();
+    stopVoice();
+    stopVideo();
+
+    subtitle.textContent = "";
+    video.classList.remove("visible");
+    status.textContent = "CASE 001 // ЗАВЕРШЕНО";
+    endScreen.style.display = "flex";
+}
+
+function restartStory() {
+    localStorage.removeItem(STORAGE_KEY);
+    startScene(0);
+}
+
+/*
+  Двойной клик / двойной тап пропускает текущий фрагмент.
+  Одиночный тап не переключает сцену.
+  Если браузер заблокировал запуск медиа, первый тап пытается
+  запустить видео и озвучку, а двойной тап пропускает фрагмент.
+*/
+
+screen.addEventListener("pointerup", async (event) => {
+    if (event.target.closest("#restart")) return;
+    if (ended) return;
+
+    const now = Date.now();
+
+    if (now - lastTapTime <= 350) {
+        lastTapTime = 0;
+        skipScene();
         return;
     }
 
-    // Нельзя пропускать активную сцену.
-    if (!videoFinished || !audioFinished) return;
+    lastTapTime = now;
 
-    if (sceneIndex < scenes.length - 1) {
-        sceneIndex++;
-        saveProgress();
+    if (waitingForGesture) {
+        try {
+            waitingForGesture = false;
 
-        flash.classList.remove("active");
-        void flash.offsetWidth;
-        flash.classList.add("active");
-
-        setTimeout(startScene, 180);
-    } else {
-        localStorage.setItem("storyFinished", "true");
-        hint.textContent = "[ АРХИВ ЗАВЕРШЁН ]";
-        hint.classList.add("visible");
-
-        // Здесь позже подключим следующую часть игры.
+            if (
+                voice.getAttribute("src") &&
+                !voicesFinished
+            ) {
+                await voice.play();
+            } else if (!videoFinished) {
+                await video.play();
+            }
+        } catch (_) {
+            waitingForGesture = true;
+        }
     }
 });
 
-window.addEventListener("beforeunload", () => {
-    saveProgress();
+restartButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    restartStory();
 });
 
-startScene();
+/*
+  При желании можно вручную начать с последней контрольной точки:
+  замени startScene(0) на startScene(loadCheckpoint()).
+  По умолчанию история всегда начинается сначала.
+*/
+
+startScene(0);
 </script>
 </body>
 </html>
