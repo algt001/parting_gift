@@ -225,13 +225,106 @@ html, body {
     CONNECTION ESTABLISHED
   </div>
 
+  <!-- Аудио -->
+  <audio id="menuMusic" src="music.mp3" preload="auto"></audio>
+
 </div>
 
 <script>
-function startGame() {
-  document.getElementById('ending').style.display = 'flex';
-  document.getElementById('play').style.display = 'none';
+// --- СКРИПТ МУЗЫКИ ---
+const music = document.getElementById('menuMusic');
+
+const FADE_IN = 3;    // Плавное начало, секунды
+const FADE_OUT = 3;   // Плавный конец, секунды
+const PAUSE = 2;      // Пауза между повторами, секунды
+const VOLUME = 0.45;  // Максимальная громкость
+
+let stopped = false;
+let playing = false;
+
+music.volume = 0;
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+async function fadeTo(target, seconds) {
+  const start = music.volume;
+  const steps = 30;
+
+  for (let i = 1; i <= steps; i++) {
+    if (stopped) return;
+    music.volume = start + (target - start) * i / steps;
+    await wait(seconds * 1000 / steps);
+  }
+}
+
+async function playMenuMusic() {
+  if (playing) return;
+  playing = true;
+
+  try {
+    await music.play();
+  } catch {
+    playing = false;
+    return;
+  }
+
+  while (!stopped) {
+    music.volume = 0;
+    await fadeTo(VOLUME, FADE_IN);
+
+    if (stopped) break;
+
+    while (!music.ended && !stopped) {
+      if (music.duration - music.currentTime <= FADE_OUT) {
+        await fadeTo(0, FADE_OUT);
+        break;
+      }
+      await wait(100);
+    }
+
+    music.pause();
+
+    if (stopped) break;
+
+    await wait(PAUSE * 1000);
+
+    if (stopped) break;
+
+    music.currentTime = 0;
+
+    try {
+      await music.play();
+    } catch {
+      break;
+    }
+  }
+  playing = false;
+}
+
+// Запуск музыки при первом клике по экрану
+document.addEventListener('pointerdown', function startOnce() {
+  document.removeEventListener('pointerdown', startOnce);
+  playMenuMusic();
+});
+
+// --- ИГРОВАЯ ЛОГИКА ---
+// Сохраняем старую функцию
+const originalStartGame = startGame;
+
+// Перезаписываем ее, добавляя затухание музыки
+startGame = async function() {
+  stopped = true;
+  music.pause();
+
+  const fade = setInterval(() => {
+    music.volume = Math.max(0, music.volume - 0.05);
+    if (music.volume <= 0) clearInterval(fade);
+  }, 100);
+
+  originalStartGame();
+};
 </script>
 </body>
 </html>
