@@ -3,20 +3,18 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CASE 001 — Материалы дела</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CASE 001 — Архив</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
     margin: 0;
     width: 100%;
     height: 100%;
     background: #000;
-    color: #ddd;
+    color: #ccc;
     font-family: "Courier New", monospace;
     overflow: hidden;
 }
@@ -27,36 +25,42 @@ html, body {
     height: 100%;
     background: #000;
     overflow: hidden;
-    cursor: default;
-    user-select: none;
-    -webkit-user-select: none;
     touch-action: manipulation;
+    user-select: none;
 }
 
 #video {
     position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    inset: 0;
     object-fit: contain;
     background: #000;
-    transform: scale(1.12);
     opacity: 0;
-    transition: opacity 1.2s ease;
+    transform: scale(1.12);
 }
 
 #video.visible {
     opacity: 1;
 }
 
+.zoom {
+    animation: zoomOut 12s linear forwards;
+}
+
+@keyframes zoomOut {
+    from { transform: scale(1.12); }
+    to { transform: scale(1); }
+}
+
 #shade {
     position: absolute;
     inset: 0;
-    pointer-events: none;
     z-index: 2;
+    pointer-events: none;
     background:
-        linear-gradient(to bottom, rgba(0,0,0,.15), transparent 25%, transparent 70%, rgba(0,0,0,.6)),
-        radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.6) 100%);
+        linear-gradient(to bottom, #0005, transparent 25%, transparent 70%, #0009),
+        radial-gradient(ellipse at center, transparent 35%, #0009 100%);
 }
 
 #noise {
@@ -70,11 +74,21 @@ html, body {
 }
 
 @keyframes noiseMove {
-    0% { transform: translate(0, 0); }
-    25% { transform: translate(2%, -1%); }
-    50% { transform: translate(-1%, 2%); }
-    75% { transform: translate(1%, 1%); }
-    100% { transform: translate(-2%, -1%); }
+    0% { transform: translate(0,0); }
+    25% { transform: translate(2%,-1%); }
+    50% { transform: translate(-1%,2%); }
+    75% { transform: translate(1%,1%); }
+    100% { transform: translate(-2%,-1%); }
+}
+
+#status {
+    position: absolute;
+    top: 22px;
+    left: 24px;
+    z-index: 5;
+    color: #aaa;
+    font-size: 12px;
+    letter-spacing: 2px;
 }
 
 #subtitle {
@@ -83,34 +97,20 @@ html, body {
     left: 7%;
     right: 7%;
     bottom: 10%;
-    min-height: 3em;
     text-align: center;
     color: #ddd;
     font-size: clamp(15px, 2.2vw, 23px);
     line-height: 1.5;
     text-shadow: 0 2px 5px #000, 0 0 10px #000;
-    white-space: pre-line;
-}
-
-#status {
-    position: absolute;
-    z-index: 5;
-    top: 22px;
-    left: 24px;
-    color: #aaa;
-    font-size: 12px;
-    letter-spacing: 2px;
-    opacity: .75;
 }
 
 #hint {
     position: absolute;
     z-index: 5;
-    right: 20px;
     bottom: 20px;
+    right: 20px;
     color: #777;
     font-size: 11px;
-    letter-spacing: 1px;
     text-align: right;
 }
 
@@ -147,37 +147,20 @@ html, body {
     border: 1px solid #555;
     color: #aaa;
     font: inherit;
-    cursor: pointer;
 }
 
-#restart:hover {
-    color: #fff;
-    border-color: #aaa;
-}
-
-@keyframes zoomOut {
-    from { transform: scale(1.12); }
-    to { transform: scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #noise {
-        animation: none;
-    }
-}
 </style>
 </head>
 
 <body>
 <div id="screen">
     <video id="video" playsinline preload="auto"></video>
-
     <div id="shade"></div>
     <div id="noise"></div>
 
     <div id="status">CASE 001 // МАТЕРИАЛЫ ДЕЛА</div>
     <div id="subtitle"></div>
-    <div id="hint">ДВОЙНОЙ КЛИК — ПРОПУСТИТЬ ФРАГМЕНТ</div>
+    <div id="hint">ДВОЙНОЙ КЛИК — ПРОПУСТИТЬ</div>
 
     <div id="end">
         <h1>КОНЕЦ МАТЕРИАЛОВ</h1>
@@ -189,18 +172,10 @@ html, body {
 <audio id="voice" preload="auto"></audio>
 
 <script>
-"use strict";
-
-/*
-  Все файлы должны лежать в одной папке с story.html.
-  video1.mp4 — без озвучки.
-*/
-
 const scenes = [
     {
         video: "video1.mp4",
-        voices: [],
-        subtitles: []
+        voices: []
     },
     {
         video: "video2.mp4",
@@ -235,84 +210,30 @@ const scenes = [
     }
 ];
 
-const STORAGE_KEY = "case001_storyCheckpoint";
-
 const screen = document.getElementById("screen");
 const video = document.getElementById("video");
 const voice = document.getElementById("voice");
 const subtitle = document.getElementById("subtitle");
 const status = document.getElementById("status");
-const endScreen = document.getElementById("end");
-const restartButton = document.getElementById("restart");
+const end = document.getElementById("end");
 
 let sceneIndex = 0;
-let sceneToken = 0;
+let token = 0;
 let voiceIndex = 0;
-let timers = [];
-let videoFinished = false;
+let voiceToken = 0;
 let voicesFinished = false;
+let videoFinished = false;
 let waitingForGesture = false;
 let ended = false;
-let lastTapTime = 0;
-let voicePlayToken = 0;
-
-/*
-  СОХРАНЕНИЕ ТОЛЬКО В КОНТРОЛЬНЫХ ТОЧКАХ.
-
-  Когда понадобится сохранить прогресс в конкретной точке,
-  вызови saveCheckpoint(номерСледующейСцены).
-
-  Например:
-  saveCheckpoint(2);
-
-  Это сохранит начало третьего фрагмента.
-  Автоматического сохранения после каждой сцены нет.
-*/
-
-function saveCheckpoint(nextSceneIndex) {
-    localStorage.setItem(
-        STORAGE_KEY,
-        String(nextSceneIndex)
-    );
-}
-
-function loadCheckpoint() {
-    const saved = Number(
-        localStorage.getItem(STORAGE_KEY)
-    );
-
-    if (
-        Number.isInteger(saved) &&
-        saved >= 0 &&
-        saved < scenes.length
-    ) {
-        return saved;
-    }
-
-    return 0;
-}
-
-function clearTimers() {
-    timers.forEach(clearTimeout);
-    timers = [];
-}
-
-function later(callback, delay) {
-    const id = setTimeout(callback, delay);
-    timers.push(id);
-    return id;
-}
+let lastTap = 0;
 
 function stopVoice() {
-    voicePlayToken++;
+    voiceToken++;
     voice.pause();
-
-    try {
-        voice.currentTime = 0;
-    } catch (_) {}
-
     voice.removeAttribute("src");
     voice.load();
+    voice.onended = null;
+    voice.onerror = null;
 }
 
 function stopVideo() {
@@ -320,61 +241,49 @@ function stopVideo() {
     video.onended = null;
     video.onerror = null;
     video.onloadeddata = null;
-
-    try {
-        video.currentTime = 0;
-    } catch (_) {}
-
     video.removeAttribute("src");
     video.load();
 }
 
-function resetSceneState() {
-    clearTimers();
-    stopVoice();
-    stopVideo();
-
-    voiceIndex = 0;
-    videoFinished = false;
-    voicesFinished = false;
-    waitingForGesture = false;
-
-    subtitle.textContent = "";
-    video.classList.remove("visible");
-}
-
-async function startScene(index) {
-    if (index < 0 || index >= scenes.length) {
+function startScene(index) {
+    if (index >= scenes.length) {
         showEnding();
         return;
     }
 
-    sceneToken++;
-    const token = sceneToken;
+    token++;
+    const currentToken = token;
 
-    resetSceneState();
+    stopVoice();
+    stopVideo();
 
     sceneIndex = index;
+    voiceIndex = 0;
+    voicesFinished = false;
+    videoFinished = false;
+    waitingForGesture = false;
     ended = false;
-    endScreen.style.display = "none";
 
-    const scene = scenes[sceneIndex];
+    subtitle.textContent = "";
+    end.style.display = "none";
+    video.classList.remove("visible");
+
+    const scene = scenes[index];
 
     status.textContent =
-        "CASE 001 // МАТЕРИАЛ " +
-        String(sceneIndex + 1).padStart(2, "0");
+        "CASE 001 // МАТЕРИАЛ " + String(index + 1).padStart(2, "0");
 
     video.style.animation = "none";
-    void video.offsetWidth;
-    video.style.animation = "zoomOut 12s linear forwards";
-
     video.src = scene.video;
     video.load();
 
     video.onloadeddata = async () => {
-        if (token !== sceneToken) return;
+        if (currentToken !== token) return;
 
         video.classList.add("visible");
+        video.style.animation = "none";
+        void video.offsetWidth;
+        video.classList.add("zoom");
 
         try {
             await video.play();
@@ -382,102 +291,73 @@ async function startScene(index) {
             waitingForGesture = true;
         }
 
-        if (token !== sceneToken) return;
+        if (currentToken !== token) return;
 
-        if (scene.voices.length > 0) {
-            playVoice(token);
-        } else {
+        if (scene.voices.length === 0) {
             voicesFinished = true;
-            subtitle.textContent = "";
-            checkSceneComplete(token);
+            checkComplete(currentToken);
+        } else {
+            playVoice(currentToken);
         }
     };
 
     video.onended = () => {
-        if (token !== sceneToken) return;
+        if (currentToken !== token) return;
 
         videoFinished = true;
-        freezeLastFrame();
-        checkSceneComplete(token);
+        video.pause();
+
+        try {
+            video.currentTime = Math.max(0, video.duration - 0.04);
+        } catch (_) {}
+
+        checkComplete(currentToken);
     };
 
     video.onerror = () => {
-        if (token !== sceneToken) return;
-
+        if (currentToken !== token) return;
         subtitle.textContent = "[ОШИБКА ЗАГРУЗКИ ВИДЕО]";
-        videoFinished = true;
-
-        if (scene.voices.length === 0) {
-            voicesFinished = true;
-        }
-
-        checkSceneComplete(token);
     };
 }
 
-function freezeLastFrame() {
-    video.pause();
-
-    try {
-        if (Number.isFinite(video.duration) && video.duration > 0) {
-            video.currentTime = Math.max(0, video.duration - 0.04);
-        }
-    } catch (_) {}
-}
-
-async function playVoice(token) {
-    if (token !== sceneToken) return;
+async function playVoice(currentToken) {
+    if (currentToken !== token) return;
 
     const scene = scenes[sceneIndex];
 
     if (voiceIndex >= scene.voices.length) {
         voicesFinished = true;
         subtitle.textContent = "";
-        checkSceneComplete(token);
+        checkComplete(currentToken);
         return;
     }
 
-    const currentVoice = scene.voices[voiceIndex];
-    const thisVoiceToken = ++voicePlayToken;
+    const item = scene.voices[voiceIndex];
+    const currentVoiceToken = ++voiceToken;
 
     voice.pause();
-    voice.src = currentVoice.file;
+    voice.src = item.file;
     voice.load();
-
-    subtitle.textContent = currentVoice.text;
+    subtitle.textContent = item.text;
 
     voice.onended = () => {
         if (
-            token !== sceneToken ||
-            thisVoiceToken !== voicePlayToken
+            currentToken !== token ||
+            currentVoiceToken !== voiceToken
         ) return;
 
         voiceIndex++;
-
-        if (voiceIndex < scene.voices.length) {
-            playVoice(token);
-        } else {
-            voicesFinished = true;
-            subtitle.textContent = "";
-            checkSceneComplete(token);
-        }
+        playVoice(currentToken);
     };
 
     voice.onerror = () => {
         if (
-            token !== sceneToken ||
-            thisVoiceToken !== voicePlayToken
+            currentToken !== token ||
+            currentVoiceToken !== voiceToken
         ) return;
 
         voiceIndex++;
-
-        if (voiceIndex < scene.voices.length) {
-            playVoice(token);
-        } else {
-            voicesFinished = true;
-            subtitle.textContent = "";
-            checkSceneComplete(token);
-        }
+        playVoice(currentToken);
     };
 
     try {
@@ -488,31 +368,26 @@ async function playVoice(token) {
     }
 }
 
-function checkSceneComplete(token) {
-    if (token !== sceneToken) return;
+function checkComplete(currentToken) {
+    if (currentToken !== token) return;
 
-    /*
-      Не переключаем сцену автоматически.
-      Когда видео закончилось, последний кадр остаётся на экране,
-      пока пользователь не пропустит фрагмент двойным кликом.
-    */
-
+    // Сцена не переключается автоматически.
+    // Последний кадр остаётся, пока пользователь не сделает двойной тап.
     if (videoFinished && voicesFinished) {
-        subtitle.textContent = " ";
+        subtitle.textContent = "";
     }
 }
 
 function skipScene() {
     if (ended) return;
 
-    sceneToken++;
-    clearTimers();
+    token++;
     stopVoice();
     stopVideo();
 
     subtitle.textContent = "";
 
-    if (sceneIndex + 1 < scenes.length) {
+    if (sceneIndex < scenes.length - 1) {
         startScene(sceneIndex + 1);
     } else {
         showEnding();
@@ -520,53 +395,38 @@ function skipScene() {
 }
 
 function showEnding() {
-    ended = true;
-    sceneToken++;
-
-    clearTimers();
+    token++;
     stopVoice();
     stopVideo();
 
+    ended = true;
     subtitle.textContent = "";
-    video.classList.remove("visible");
     status.textContent = "CASE 001 // ЗАВЕРШЕНО";
-    endScreen.style.display = "flex";
-}
+    video.classList.remove("visible");
+    end.style.display = "flex";
 
-function restartStory() {
-    localStorage.removeItem(STORAGE_KEY);
-    startScene(0);
+    // Полный сброс прогресса: ничего не сохраняется.
+    localStorage.removeItem("case001_storyCheckpoint");
 }
-
-/*
-  Двойной клик / двойной тап пропускает текущий фрагмент.
-  Одиночный тап не переключает сцену.
-  Если браузер заблокировал запуск медиа, первый тап пытается
-  запустить видео и озвучку, а двойной тап пропускает фрагмент.
-*/
 
 screen.addEventListener("pointerup", async (event) => {
-    if (event.target.closest("#restart")) return;
-    if (ended) return;
+    if (event.target.closest("#restart") || ended) return;
 
     const now = Date.now();
 
-    if (now - lastTapTime <= 350) {
-        lastTapTime = 0;
+    if (now - lastTap <= 350) {
+        lastTap = 0;
         skipScene();
         return;
     }
 
-    lastTapTime = now;
+    lastTap = now;
 
     if (waitingForGesture) {
         try {
             waitingForGesture = false;
 
-            if (
-                voice.getAttribute("src") &&
-                !voicesFinished
-            ) {
+            if (voice.getAttribute("src") && !voicesFinished) {
                 await voice.play();
             } else if (!videoFinished) {
                 await video.play();
@@ -577,16 +437,11 @@ screen.addEventListener("pointerup", async (event) => {
     }
 });
 
-restartButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    restartStory();
+document.getElementById("restart").addEventListener("click", () => {
+    // Перезапуск тоже полностью начинает историю сначала.
+    localStorage.removeItem("case001_storyCheckpoint");
+    startScene(0);
 });
-
-/*
-  При желании можно вручную начать с последней контрольной точки:
-  замени startScene(0) на startScene(loadCheckpoint()).
-  По умолчанию история всегда начинается сначала.
-*/
 
 startScene(0);
 </script>
