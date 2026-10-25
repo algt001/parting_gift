@@ -1,0 +1,431 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASE 001</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #000;
+    color: #ddd;
+    font-family: "Courier New", monospace;
+    overflow: hidden;
+}
+
+#screen {
+    position: relative;
+    width: 100vw;
+    height: 100dvh;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+#shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,.25),
+        transparent 25%,
+        transparent 65%,
+        rgba(0,0,0,.75)
+    );
+}
+
+#grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .10;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+#caption {
+    position: absolute;
+    bottom: 12%;
+    left: 7%;
+    right: 7%;
+    text-align: center;
+    font-size: clamp(15px, 2.4vw, 23px);
+    line-height: 1.5;
+    color: #eee;
+    text-shadow: 0 2px 5px #000, 0 0 8px #000;
+    white-space: pre-line;
+}
+
+#hint {
+    position: absolute;
+    bottom: 3%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 1s;
+}
+
+#hint.visible {
+    opacity: 1;
+}
+
+#case {
+    position: absolute;
+    top: 4%;
+    left: 4%;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+#flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#flash.active {
+    animation: flash .16s steps(2, end);
+}
+
+@keyframes flash {
+    0% { opacity: .18; }
+    100% { opacity: 0; }
+}
+
+#error {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: #000;
+    padding: 30px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.7;
+    color: #aaa;
+}
+</style>
+</head>
+
+<body>
+<div id="screen">
+    <video id="video" playsinline preload="auto"></video>
+    <div id="shade"></div>
+    <div id="grain"></div>
+    <div id="case">CASE 001 // ARCHIVE</div>
+    <div id="caption"></div>
+    <div id="hint">[ НАЖМИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ ]</div>
+    <div id="flash"></div>
+
+    <div id="error">
+        Не удалось загрузить видео.<br>
+        Проверь названия файлов и их расположение в репозитории.
+    </div>
+</div>
+
+<audio id="voice"></audio>
+
+<script>
+const scenes = [
+    {
+        video: "video1.mp4",
+        audio: [],
+        subtitles: []
+    },
+    {
+        video: "video2.mp4",
+        audio: ["voice2a.mp3", "voice2b.mp3"],
+        subtitles: [
+            {
+                start: 0,
+                end: 13,
+                text: "Тело несовершеннолетней было обнаружено в собственном доме. По предварительным данным, смерть могла выглядеть как самоубийство через повешение."
+            },
+            {
+                start: 13,
+                end: 18,
+                text: "Однако при первичном осмотре на шее погибшей обнаружены следы сдавливания, характер которых вызывает сомнения в первоначальной версии произошедшего."
+            }
+        ]
+    },
+    {
+        video: "video3.mp4",
+        audio: ["voice3.mp3"],
+        subtitles: [
+            {
+                start: 0,
+                end: 9,
+                text: "Предварительное заключение: имеющихся данных недостаточно для однозначного вывода о самоубийстве. Версия насильственной смерти не исключена."
+            }
+        ]
+    },
+    {
+        video: "video4.mp4",
+        audio: ["voice4.mp3"],
+        subtitles: [
+            {
+                start: 0,
+                end: 12,
+                text: "Следы требуют дополнительной судебно-медицинской экспертизы. На данный момент установить, были ли они получены до смерти или возникли при иных обстоятельствах, не представляется возможным."
+            }
+        ]
+    }
+];
+
+const video = document.getElementById("video");
+const voice = document.getElementById("voice");
+const caption = document.getElementById("caption");
+const hint = document.getElementById("hint");
+const flash = document.getElementById("flash");
+const errorBox = document.getElementById("error");
+
+let sceneIndex = Number(localStorage.getItem("storyScene") || 0);
+let audioIndex = 0;
+let sceneReady = false;
+let audioFinished = false;
+let videoFinished = false;
+let frozen = false;
+let audioStartedAt = 0;
+let audioTimer = null;
+let subtitleTimer = null;
+let waitingForGesture = false;
+
+sceneIndex = Math.max(0, Math.min(sceneIndex, scenes.length - 1));
+
+function saveProgress() {
+    localStorage.setItem("storyScene", String(sceneIndex));
+}
+
+function stopTimers() {
+    clearInterval(audioTimer);
+    clearInterval(subtitleTimer);
+}
+
+function showSubtitle(text) {
+    caption.textContent = text || "";
+}
+
+function startScene() {
+    stopTimers();
+
+    const scene = scenes[sceneIndex];
+
+    audioIndex = 0;
+    sceneReady = true;
+    audioFinished = scene.audio.length === 0;
+    videoFinished = false;
+    frozen = false;
+    waitingForGesture = false;
+
+    caption.textContent = "";
+    hint.classList.remove("visible");
+    errorBox.style.display = "none";
+
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    video.src = scene.video;
+    video.currentTime = 0;
+
+    saveProgress();
+
+    video.onloadeddata = async () => {
+        try {
+            await video.play();
+        } catch (e) {
+            waitingForGesture = true;
+            showSubtitle("[ НАЖМИТЕ, ЧТОБЫ НАЧАТЬ ]");
+        }
+
+        if (scene.audio.length > 0) {
+            playVoice();
+        } else {
+            audioFinished = true;
+            checkSceneEnd();
+        }
+    };
+
+    video.onerror = () => {
+        errorBox.style.display = "flex";
+    };
+
+    video.load();
+}
+
+function playVoice() {
+    const scene = scenes[sceneIndex];
+
+    if (audioIndex >= scene.audio.length) {
+        audioFinished = true;
+        showSubtitle("");
+        checkSceneEnd();
+        return;
+    }
+
+    voice.pause();
+    voice.currentTime = 0;
+    voice.src = scene.audio[audioIndex];
+
+    voice.onloadedmetadata = () => {
+        audioStartedAt = performance.now();
+        voice.play().catch(() => {
+            waitingForGesture = true;
+            showSubtitle("[ НАЖМИТЕ, ЧТОБЫ ВОЗОБНОВИТЬ ЗВУК ]");
+        });
+        updateSubtitle();
+        clearInterval(subtitleTimer);
+        subtitleTimer = setInterval(updateSubtitle, 100);
+    };
+
+    voice.onended = () => {
+        clearInterval(subtitleTimer);
+        audioIndex++;
+
+        if (audioIndex < scene.audio.length) {
+            playVoice();
+        } else {
+            audioFinished = true;
+            showSubtitle("");
+            checkSceneEnd();
+        }
+    };
+
+    voice.onerror = () => {
+        clearInterval(subtitleTimer);
+        audioFinished = true;
+        showSubtitle("[ ОШИБКА ЗАГРУЗКИ АУДИО ]");
+        checkSceneEnd();
+    };
+
+    voice.load();
+}
+
+function updateSubtitle() {
+    const scene = scenes[sceneIndex];
+    const subtitles = scene.subtitles;
+
+    if (!subtitles.length) {
+        showSubtitle("");
+        return;
+    }
+
+    let time = voice.currentTime;
+
+    // Вторая аудиозапись начинается после первой.
+    if (sceneIndex === 1 && audioIndex === 1) {
+        time += 13;
+    }
+
+    const line = subtitles.find(
+        item => time >= item.start && time < item.end
+    );
+
+    showSubtitle(line ? line.text : "");
+}
+
+video.addEventListener("ended", () => {
+    videoFinished = true;
+    freezeLastFrame();
+    checkSceneEnd();
+});
+
+function freezeLastFrame() {
+    if (frozen) return;
+
+    frozen = true;
+
+    // Переходим на последний отображаемый кадр и останавливаем видео.
+    if (video.duration && Number.isFinite(video.duration)) {
+        video.currentTime = Math.max(0, video.duration - 0.04);
+    }
+
+    video.pause();
+}
+
+video.addEventListener("timeupdate", () => {
+    if (
+        video.duration &&
+        Number.isFinite(video.duration) &&
+        video.currentTime >= video.duration - 0.04 &&
+        !videoFinished
+    ) {
+        videoFinished = true;
+        freezeLastFrame();
+        checkSceneEnd();
+    }
+});
+
+function checkSceneEnd() {
+    if (videoFinished && audioFinished) {
+        hint.classList.add("visible");
+    }
+}
+
+document.getElementById("screen").addEventListener("click", async () => {
+    if (waitingForGesture) {
+        waitingForGesture = false;
+
+        if (voice.src && !audioFinished) {
+            try {
+                await voice.play();
+                updateSubtitle();
+            } catch (e) {}
+        } else if (!videoFinished) {
+            try {
+                await video.play();
+            } catch (e) {}
+        }
+
+        return;
+    }
+
+    // Нельзя пропускать активную сцену.
+    if (!videoFinished || !audioFinished) return;
+
+    if (sceneIndex < scenes.length - 1) {
+        sceneIndex++;
+        saveProgress();
+
+        flash.classList.remove("active");
+        void flash.offsetWidth;
+        flash.classList.add("active");
+
+        setTimeout(startScene, 180);
+    } else {
+        localStorage.setItem("storyFinished", "true");
+        hint.textContent = "[ АРХИВ ЗАВЕРШЁН ]";
+        hint.classList.add("visible");
+
+        // Здесь позже подключим следующую часть игры.
+    }
+});
+
+window.addEventListener("beforeunload", () => {
+    saveProgress();
+});
+
+startScene();
+</script>
+</body>
+</html>
