@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #050505;
+  color: white;
+  font-family: monospace;
+  overflow: hidden;
+}
+
+#menu {
+  height: 100vh;
+  min-height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse, #292929 0%, #101010 40%, #000 80%);
+}
+
+/* Жуткое лицо */
+.face {
+  position: absolute;
+  width: 230px;
+  height: 310px;
+  border-radius: 48% 48% 42% 42%;
+  background: #111;
+  box-shadow: 0 0 70px #555;
+  filter: blur(3px);
+  opacity: .8;
+  animation: distort 4s infinite;
+}
+
+.face::before {
+  content: "";
+  position: absolute;
+  top: 95px;
+  left: 38px;
+  width: 45px;
+  height: 15px;
+  background: #aaa;
+  box-shadow: 90px 0 #aaa;
+  transform: rotate(-8deg);
+}
+
+.face::after {
+  content: "";
+  position: absolute;
+  top: 190px;
+  left: 75px;
+  width: 80px;
+  height: 30px;
+  border-bottom: 4px solid #777;
+  border-radius: 50%;
+}
+
+.noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .2;
+  background: repeating-linear-gradient(
+    transparent 0px,
+    transparent 3px,
+    #aaa 4px,
+    transparent 5px
+  );
+  animation: flicker .15s infinite;
+}
+
+#play {
+  z-index: 2;
+  position: relative;
+  margin-top: 260px;
+  color: #ddd;
+  background: transparent;
+  border: none;
+  font: bold 25px monospace;
+  letter-spacing: 8px;
+  cursor: pointer;
+  text-shadow: 0 0 10px white;
+  animation: blink 2s infinite;
+}
+
+#play:hover {
+  color: red;
+  text-shadow: 0 0 18px red;
+}
+
+#message {
+  display: none;
+  z-index: 3;
+  position: relative;
+  text-align: center;
+  color: #b00;
+  letter-spacing: 4px;
+  padding: 20px;
+  animation: flicker .2s infinite;
+}
+
+@keyframes blink {
+  0%, 45%, 48%, 100% { opacity: 1; }
+  46%, 47% { opacity: .2; }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: .9; }
+  50% { opacity: .5; }
+}
+
+@keyframes distort {
+  0%, 90%, 100% { transform: scale(1); }
+  92% { transform: scale(1.04) skewX(5deg); }
+  95% { transform: translateX(-8px); }
+}
+
+@media (max-width: 600px) {
+  .face { transform: scale(.8); }
+  #play { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<div id="menu">
+  <div class="face" id="face"></div>
+  <div class="noise"></div>
+  <button id="play" onclick="startGame()">PLAY</button>
+  <div id="message">CONNECTION ESTABLISHED</div>
+</div>
+
+<script>
+function startGame() {
+  document.getElementById('play').style.display = 'none';
+  document.getElementById('face').style.display = 'none';
+  document.getElementById('message').style.display = 'block';
+}
+</script>
+</body>
+</html>
