@@ -28,7 +28,6 @@ html, body {
   isolation: isolate;
 }
 
-/* Фоновое изображение */
 #face {
   position: absolute;
   inset: -5%;
@@ -43,7 +42,6 @@ html, body {
   pointer-events: none;
 }
 
-/* Затемнение краёв */
 #vignette {
   position: absolute;
   inset: 0;
@@ -56,7 +54,6 @@ html, body {
   pointer-events: none;
 }
 
-/* Полосы старого телевизора */
 #scanlines {
   position: absolute;
   inset: 0;
@@ -71,7 +68,6 @@ html, body {
   );
 }
 
-/* Шум */
 #noise {
   position: absolute;
   inset: -50%;
@@ -83,7 +79,6 @@ html, body {
   animation: noiseMove .2s steps(2) infinite;
 }
 
-/* Редкие помехи */
 #glitch {
   position: absolute;
   inset: 0;
@@ -92,7 +87,6 @@ html, body {
   animation: glitch 8s infinite;
 }
 
-/* Единственная кнопка */
 #play {
   position: absolute;
   left: 50%;
@@ -121,7 +115,6 @@ html, body {
   color: #777;
 }
 
-/* Начало игры */
 #ending {
   display: none;
   position: absolute;
@@ -209,6 +202,7 @@ html, body {
 }
 </style>
 </head>
+
 <body>
 <div id="screen">
 
@@ -218,7 +212,6 @@ html, body {
   <div id="scanlines"></div>
   <div id="noise"></div>
   <div id="glitch"></div>
-
   <button id="play" onclick="startGame()">PLAY</button>
 
   <div id="ending">
@@ -254,6 +247,7 @@ async function fadeTo(target, seconds) {
 
   for (let i = 1; i <= steps; i++) {
     if (stopped) return;
+
     music.volume = start + (target - start) * i / steps;
     await wait(seconds * 1000 / steps);
   }
@@ -300,21 +294,23 @@ async function playMenuMusic() {
       break;
     }
   }
+
   playing = false;
 }
 
-// Запуск музыки при первом клике по экрану
+// Запуск после первого взаимодействия с меню
 document.addEventListener('pointerdown', function startOnce() {
   document.removeEventListener('pointerdown', startOnce);
   playMenuMusic();
 });
 
 // --- ИГРОВАЯ ЛОГИКА ---
-// Сохраняем старую функцию
-const originalStartGame = startGame;
+// Сначала объявляем функцию startGame
+function startGame() {
+  document.getElementById('ending').style.display = 'flex';
+  document.getElementById('play').style.display = 'none';
 
-// Перезаписываем ее, добавляя затухание музыки
-startGame = async function() {
+  // Останавливаем музыку при нажатии PLAY
   stopped = true;
   music.pause();
 
@@ -322,9 +318,7 @@ startGame = async function() {
     music.volume = Math.max(0, music.volume - 0.05);
     if (music.volume <= 0) clearInterval(fade);
   }, 100);
-
-  originalStartGame();
-};
+}
 </script>
 </body>
 </html>
